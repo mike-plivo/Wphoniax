@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: iso-8859-15 -*-
 
-VERSION = "0.3"
+VERSION = "0.3.0"
 
 import sys
 import os
@@ -73,11 +73,18 @@ class Frame(wx.Frame):
     self.title = title
     self.currentaccount = None
     self._is_local_hangup = False
+    self._is_ui_on = False
 
     for acc in self.accounts:
       self.accountitems.append(acc.accountname)
     # set default account
     self.currentaccount = self.accounts[0]
+
+    # enable mute button ?
+    self._enable_mute = True
+    if 'mute' in generaloptions:
+      if txt2bool(generaloptions['mute']) is False:
+        self._enable_mute = False
     
     # set call begin time
     self.callstartat = time.time()
@@ -107,14 +114,17 @@ class Frame(wx.Frame):
     # buttons
     self.button1 = wx.Button(self.panel, 1, 'Appeler', size=(120, 40))
     self.button2 = wx.Button(self.panel, 2, 'Raccrocher', size=(120, 40))
-    self.mutebutton = wx.Button(self.panel, 3, 'MUTE', size=(80, 40))
     self.Bind(wx.EVT_BUTTON, self.doCall, id=1)
     self.Bind(wx.EVT_BUTTON, self.doHangup, id=2)
-    self.Bind(wx.EVT_BUTTON, self.doMute, id=3)
+
+    if self._enable_mute:
+      self.mutebutton = wx.Button(self.panel, 3, 'MUTE', size=(80, 40))
+      self.Bind(wx.EVT_BUTTON, self.doMute, id=3)
+      self.mutebutton.Hide()
+
     self.bbox = wx.GridSizer(1, 3, 0, 0)
     self.bbox.Add(self.button1, 0, wx.LEFT|wx.EXPAND|wx.ALIGN_CENTER, 4)
     self.button2.Hide()
-    self.mutebutton.Hide()
     vbox.Add(self.bbox)
     vbox.Add((-1, 10))
 
@@ -138,6 +148,7 @@ class Frame(wx.Frame):
     # timer
     self.timer = wx.Timer(self, id=9000)
     self.Bind(wx.EVT_TIMER, self.updateStatus, self.timer, id=9000)
+    self.timer.Start(200, False)
 
     # panel sizer
     self.panel.SetSizer(vbox)
@@ -147,29 +158,33 @@ class Frame(wx.Frame):
     print "DEBUG: %s" % str(msg)
 
   def switch_ui_on(self):
+    self._is_ui_on = True
     self.bbox.Detach(self.button1)
     self.lbox.Detach(self.combox)
     self.button1.Hide()
     self.combox.Hide()
 
     self.bbox.Add(self.button2)
-    self.bbox.Add(self.mutebutton)
     self.lbox.Add(self.accbox)
     self.button2.Show()
-    self.switch_ui_mute_on()
-    self.mutebutton.Show()
+    if self._enable_mute:
+      self.bbox.Add(self.mutebutton)
+      self.switch_ui_mute_on()
+      self.mutebutton.Show()
     self.accbox.Show()
     self.accbox.SetLabel("Compte : %s - calling ..." % self.currentaccount.accountname)
     self.bbox.Layout()
     self.lbox.Layout()
 
   def switch_ui_off(self):
+    self._is_ui_on = False
     self.bbox.Detach(self.button2)
-    self.bbox.Detach(self.mutebutton)
+    if self._enable_mute:
+      self.bbox.Detach(self.mutebutton)
+      self.switch_ui_mute_off()
+      self.mutebutton.Hide()
     self.lbox.Detach(self.accbox)
     self.button2.Hide()
-    self.switch_ui_mute_off()
-    self.mutebutton.Hide()
     self.accbox.Hide()
 
     self.bbox.Add(self.button1)
@@ -185,7 +200,6 @@ class Frame(wx.Frame):
     self._mute = False
     self.call = call.Call(dtmfsound=self.currentaccount.dtmfsound)
     self.call.call(peer)
-    self.timer.Start(200, False)
     while True:
       if not self.call:
         break
@@ -273,12 +287,12 @@ class Frame(wx.Frame):
   def updateStatus(self, event):
     if self.call: 
       if self.call.is_call_disconnected():
-        self.timer.Stop()
-        self.switch_ui_off()
-        if self._is_local_hangup:
-          self._is_local_hangup = False
-          return
-        self.disconnectedPopup()
+        if self._is_ui_on:
+          self.switch_ui_off()
+          if self._is_local_hangup:
+            self._is_local_hangup = False
+            return
+          self.disconnectedPopup()
       else:
         if self.currentaccount:
           period = time.time() - self.callstartat
@@ -325,7 +339,6 @@ class Frame(wx.Frame):
     playdtmf = self.currentaccount.dtmfsound
     self.callth = threading.Thread(target=self._doCall, args=(peer, ))
     self.callth.start()
-
     self.callstartat = time.time()
     self.switch_ui_on()
 
@@ -396,7 +409,7 @@ if __name__ == '__main__':
     errorPopup("Aucun compte dans wphoniax.ini !")
     sys.exit(1)
 
-  # set avalaible accounts
+  # set valid accounts
   accounts = []
   generaloptions = {}
   for section in sorted(sections):
