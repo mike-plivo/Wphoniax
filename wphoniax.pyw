@@ -118,7 +118,8 @@ class Frame(wx.Frame):
     self.Bind(wx.EVT_BUTTON, self.doHangup, id=2)
 
     if self._enable_mute:
-      self.mutebutton = wx.Button(self.panel, 3, 'Mute OFF', size=(80, 40))
+      self.mutebutton = wx.Button(self.panel, 3, 'Mute mode OFF', size=(100, 40))
+      self.mutebutton.SetBackgroundColour('#7dd993')
       self.Bind(wx.EVT_BUTTON, self.doMute, id=3)
       self.mutebutton.Hide()
 
@@ -169,7 +170,7 @@ class Frame(wx.Frame):
     self.button2.Show()
     if self._enable_mute:
       self.bbox.Add(self.mutebutton)
-      self.switch_ui_mute_on()
+      self.switch_ui_mute_off()
       self.mutebutton.Show()
     self.accbox.Show()
     self.accbox.SetLabel("Compte : %s - calling ..." % self.currentaccount.accountname)
@@ -181,7 +182,7 @@ class Frame(wx.Frame):
     self.bbox.Detach(self.button2)
     if self._enable_mute:
       self.bbox.Detach(self.mutebutton)
-      self.switch_ui_mute_off()
+      self.switch_ui_mute_on()
       self.mutebutton.Hide()
     self.lbox.Detach(self.accbox)
     self.button2.Hide()
@@ -248,11 +249,13 @@ class Frame(wx.Frame):
     self.call = None
     self.log_debug( "End call %s" % peer)
 
-  def switch_ui_mute_on(self):
-    self.mutebutton.SetLabel("Mute OFF")
-    
   def switch_ui_mute_off(self):
-    mutetitle = "Mute ON"
+    self.mutebutton.SetLabel("Mute mode OFF")
+    self.mutebutton.SetBackgroundColour('#7dd993')
+    
+  def switch_ui_mute_on(self):
+    mutetitle = "Mute mode ON"
+    self.mutebutton.SetBackgroundColour('#d98383')
     if self.currentaccount:
       if self.currentaccount.mutemode == OPT_MUTE_INCOMING:
         mutetitle += " (i)"
@@ -268,11 +271,11 @@ class Frame(wx.Frame):
       if self._mute:
         self.eventqueue.put(EVENT_UNMUTE)
         self._mute = False
-        self.switch_ui_mute_on()
+        self.switch_ui_mute_off()
       else:
         self.eventqueue.put(EVENT_MUTE)
         self._mute = True
-        self.switch_ui_mute_off()
+        self.switch_ui_mute_on()
     else:
       self.log_debug( "No call found")
 
