@@ -325,6 +325,30 @@ class IAXWrapper:
   def call(self, num):
     return self.iax.iaxc_call(num)
 
+  def answer_call(self, callNo):
+    self.iax.iaxc_answer_call(callNo)
+
+  def select_call(self, callNo):
+    self.iax.iaxc_select_call(callNo)
+
+  def selected_call(self):
+    return self.iax.iaxc_selected_call()
+
+  def send_text(self, text):
+    self.iax.iaxc_send_text(text)
+
+  def send_url(self, url, link):
+    self.iax.iaxc_send_url(url, link)
+
+  def reject_call(self):
+    self.iax.iaxc_reject_call()
+
+  def reject_call_number(self, callNo):
+    self.iax.iaxc_reject_call_number(callNo)
+
+  def send_busy_on_incoming_call(callNo):
+    self.iax.iaxc_send_busy_on_incoming_call(callNo)
+
   def start_processing_thread(self):
     self.iax.iaxc_start_processing_thread()
 
@@ -356,6 +380,11 @@ class IAXWrapper:
     cb_func = CFUNCTYPE(c_int, Event)
     self.pcb = cb_func(cb)
     self.iax.iaxc_set_event_callback(self.pcb)
+
+  def version(self):
+    buff = create_string_buffer(IAXC_EVENT_BUFSIZ)
+    self.iax.iaxc_version(byref(buff))
+    return buff.value
 
 
 class IAXClient(IAXWrapper):
